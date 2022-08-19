@@ -1,0 +1,106 @@
+{
+	"info": {
+		"_postman_id": "6ed8f8fa-7305-47d8-8463-873545522a4a",
+		"name": "oauth",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "4556834"
+	},
+	"item": [
+		{
+			"name": "Token",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "secret",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "messaging-client",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "grant_type",
+							"value": "client_credentials",
+							"type": "text"
+						},
+						{
+							"key": "client_id",
+							"value": "messaging-client",
+							"type": "text"
+						},
+						{
+							"key": "client_secret",
+							"value": "secret",
+							"type": "text"
+						},
+						{
+							"key": "scope",
+							"value": "message.read message.write",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:9000/oauth2/token",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"oauth2",
+						"token"
+					],
+					"query": [
+						{
+							"key": "scope",
+							"value": "message:read",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Resource Request",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJraWQiOiI4NWY3MDg3NS0xZmEzLTQ1NjYtOWYyNC1lZDRhMmFiNmU2OWEiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJtZXNzYWdpbmctY2xpZW50IiwiYXVkIjoibWVzc2FnaW5nLWNsaWVudCIsIm5iZiI6MTY2MDc1NjY0Nywic2NvcGUiOlsibWVzc2FnZS5yZWFkIiwibWVzc2FnZS53cml0ZSJdLCJpc3MiOiJodHRwOlwvXC9sb2NhbGhvc3Q6OTAwMCIsImV4cCI6MTY2MDc1ODQ0NywiaWF0IjoxNjYwNzU2NjQ3fQ.A9l5xhav832th89uPvGjhDQJV2KkNA7OzNYxdEUUXJofw4FuYv3GSvXOzcX0phGcC18e5kjHX9LtkqtFm9wn8D97v5EQQA9iprSztnPHSb1jBuU80_1cBNsoSHyHRYOVomGQyeGXkHgUJNprcr8AqUwvEnssJCQ0-rTcbIMV9cSu60iKFBwOPflWiz6rp0nkVLbnSCewC5vqL90lQkA3okydiIY-RqwgNCSwjYpDmHT8oHG8BV9zhRWqjtQGZb0BF-Th27VdjBwCR1f5At5h_tMmoDzjgWZwTIBq3CAhqzd28RUoU7FEphLUlFoFQAdFbuShkcTyBUsPXaqlGYd8CQ",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8090/products",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8090",
+					"path": [
+						"products"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
