@@ -9,7 +9,6 @@
 	</parent>
 	<properties>
 		<log4j2.version>2.7</log4j2.version>
-		<spring.boot.version>2.3.12.RELEASE</spring.boot.version>
 	</properties>
 	<artifactId>resource-server</artifactId>
 	<dependencies>
@@ -30,8 +29,14 @@
 			<artifactId>gson</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.httpcomponents</groupId>
-			<artifactId>httpclient</artifactId>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.20.0</version>
 		</dependency>
 	</dependencies>
 </project>

@@ -1,6 +1,9 @@
 package northwind.config;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,10 +11,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,11 +26,15 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.config.ClientSettings;
-import org.springframework.security.oauth2.server.authorization.config.ProviderSettings;
-import org.springframework.security.oauth2.server.authorization.config.TokenSettings;
+import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -35,47 +42,50 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
 import northwind.jwk.JsonWebTokenKeySet;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.util.CollectionUtils;
 
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
-//@Import(OAuth2AuthorizationServerConfiguration.class)
 @ComponentScan(basePackages= {"northwind"})
 public class AuthServerConfig {
 	
 	@Autowired
 	private JsonWebTokenKeySet jwtKeySet;
-	
-	@Bean 
+	@Bean
 	@Order(1)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
-			throws Exception {
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-//		http
-			// Redirect to the login page when not authenticated from the
-			// authorization endpoint
-//			.exceptionHandling((exceptions) -> exceptions
-//				.authenticationEntryPoint(
-//					new LoginUrlAuthenticationEntryPoint("/login"))
-//			);
+	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
 
-		return http.formLogin(Customizer.withDefaults()).build();
+		OAuth2AuthorizationServerConfigurer  authorizationServerConfigurer =
+				OAuth2AuthorizationServerConfigurer.authorizationServer();
+
+	    http
+	        //.securityMatcher("/oauth2/**", "/.well-known/**")
+			.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+			.with(authorizationServerConfigurer, (authorizationServer) ->
+					authorizationServer
+							.oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
+			)
+			.authorizeHttpRequests(authorize -> authorize
+					.requestMatchers("/oauth2/token", "/oauth2/authorize", "/oauth2/introspect",
+							"/oauth2/revoke", "/.well-known/**")
+					.permitAll()
+					.anyRequest().authenticated()
+			)
+	        .csrf(csrf -> csrf.ignoringRequestMatchers(
+	            new OrRequestMatcher(
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/oauth2/token"),
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/oauth2/authorize"),
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/oauth2/introspect"),
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/oauth2/revoke"),
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/.well-known/**")
+	            )
+	        ));
+	    return http.build();
 	}
-
-//	@Bean 
-//	@Order(2)
-//	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
-//			throws Exception {
-//		http
-//			.authorizeHttpRequests((authorize) -> authorize
-//				.anyRequest().authenticated()
-//			)
-//			.httpBasic();
-//			// Form login handles the redirect to the login page from the
-//			// authorization server filter chain
-//			//.formLogin(Customizer.withDefaults());
-//
-//		return http.build();
-//	}
 
 	@Bean 
 	public UserDetailsService userDetailsService() {
@@ -126,10 +136,41 @@ public class AuthServerConfig {
 		return new ImmutableJWKSet<>(jwkSet);
 	}
 
-
-	@Bean 
-	public ProviderSettings providerSettings() {
-		return ProviderSettings.builder().issuer("http://localhost:9000").build();
+	@Bean
+	public AuthorizationServerSettings authorizationServerSettings() {
+		return AuthorizationServerSettings.builder().issuer("http://localhost:9000").build();
 	}
 
+	@Bean
+	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+	    return context -> {
+	        if (context.getTokenType().getValue().equals("access_token")) {
+	            // Try to get scopes from different context sources
+	            Set<String> scopes = context.getAuthorizedScopes();
+
+	            // If authorized scopes is empty, try to get from the OAuth2TokenContext
+	            if (CollectionUtils.isEmpty(scopes)) {
+	                // Get scopes from the token request context
+	                OAuth2Authorization authorization = context.get(OAuth2Authorization.class);
+	                if (authorization != null) {
+	                    scopes = authorization.getAuthorizedScopes();
+	                }
+	            }
+
+	            if (CollectionUtils.isEmpty(scopes)) {
+	                RegisteredClient registeredClient = context.get(RegisteredClient.class);
+	                if (registeredClient != null) {
+	                    // For client_credentials grant, use all client scopes
+	                    scopes = registeredClient.getScopes();
+	                }
+	            }
+
+	            if (!CollectionUtils.isEmpty(scopes)) {
+	                List<String> scopesList = new ArrayList<>(scopes);
+	                context.getClaims().claim("scope", scopesList);
+	                context.getClaims().claim("scp", String.join(" ", scopes));
+	            }
+	        }
+	    };
+	}
 }
