@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: oauth-client
+  profiles:
+    active: default
+
+logging:
+  config: classpath:logback.xml
+  level:
+    northwind: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+
+
+oauth-token-url: http://localhost:9000/oauth2/token
+oauth-client-id: messaging-client
+oauth-client-secret: secret
+resource-url: http://localhost:8090/products

@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +16,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import northwind.client.ApacheHttpClient;
 import northwind.exception.CoreException;
 import northwind.model.Product;
@@ -47,5 +49,9 @@ public class ProductsController {
 		return null;
 	}
 
+    @RequestMapping(value = "/products", method = RequestMethod.POST)
+    public ResponseEntity<String> createProduct(HttpServletRequest request, HttpServletResponse response) {
+        return ResponseEntity.status(HttpStatus.CREATED).body("Product created");
+    }
 	
 }
